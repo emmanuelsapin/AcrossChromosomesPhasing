@@ -1,0 +1,19 @@
+CXX = g++
+CXXFLAGS = -std=c++11 -O0 -g -fopenmp -Wall -Wextra
+LDFLAGS = -lm -fopenmp
+TARGET = ProgramPhasing_OO
+SOURCES = main_oo.cpp PhasingProgram.cpp
+OBJECTS = $(SOURCES:.cpp=.o)
+HEADERS = PhasingProgram.h readinteger.h readreal.h readnegativereal.h
+
+$(TARGET): $(OBJECTS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS) $(LDFLAGS)
+
+%.o: %.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+
+.PHONY: clean
+

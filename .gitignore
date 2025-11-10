@@ -1,0 +1,56 @@
+# Fichiers compilés et exécutables
+*.exe
+*.o
+*.obj
+*.out
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+ProgramPhasing
+GenerateurDonneesAleatoires
+GenerateurDonneesAleatoires.exe
+
+# Fichiers de données générées (optionnel - commentez si vous voulez les inclure)
+donnees_aleatoires/
+*.hap
+MAF.txt
+
+# Fichiers de sortie du phasing
+resultats_phasing/
+*.ped
+
+# Fichiers temporaires
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Fichiers IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Fichiers de build
+build/
+dist/
+cmake-build-*/
+
+# Fichiers de log
+*.log
+
+# Fichiers de sauvegarde
+*.bak
+*.backup
+*.old
+
+# Fichiers système
+desktop.ini
+

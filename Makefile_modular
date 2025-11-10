@@ -1,0 +1,51 @@
+CXX = g++
+CXXFLAGS = -std=c++11 -O0 -g -fopenmp -Wall -Wextra -I./include
+LDFLAGS = -lm -fopenmp
+TARGET = ProgramPhasing_Modular
+
+# Source directories
+SRC_DIR = src
+INCLUDE_DIR = include
+
+# Source files
+SOURCES = main_oo.cpp \
+          $(SRC_DIR)/GenomeDataManager.cpp \
+          $(SRC_DIR)/RelativeIdentificationEngine.cpp \
+          $(SRC_DIR)/GenomeFileLoader.cpp \
+          $(SRC_DIR)/ConfigurationManager.cpp \
+          $(SRC_DIR)/OutputFileWriter.cpp \
+          $(SRC_DIR)/PhasingAlgorithmEngine.cpp \
+          $(SRC_DIR)/HaplotypePhasingProgram.cpp
+
+OBJECTS = $(SOURCES:.cpp=.o)
+
+# Headers
+HEADERS = $(INCLUDE_DIR)/PhasingProgram.h \
+          $(INCLUDE_DIR)/Constants.h \
+          $(INCLUDE_DIR)/ErrorCodes.h \
+          $(INCLUDE_DIR)/Exceptions.h \
+          $(INCLUDE_DIR)/Interfaces.h \
+          $(INCLUDE_DIR)/ChromosomeDivider.h \
+          $(INCLUDE_DIR)/GenomeDataManager.h \
+          $(INCLUDE_DIR)/RelativeIdentificationEngine.h \
+          $(INCLUDE_DIR)/GenomeFileLoader.h \
+          $(INCLUDE_DIR)/OutputFileWriter.h \
+          $(INCLUDE_DIR)/ConfigurationManager.h \
+          $(INCLUDE_DIR)/HaplotypePhasingProgram.h \
+          $(INCLUDE_DIR)/utils/readinteger.h \
+          $(INCLUDE_DIR)/utils/readreal.h \
+          $(INCLUDE_DIR)/utils/readnegativereal.h \
+          $(INCLUDE_DIR)/utils/FileIOUtils.h
+
+$(TARGET): $(OBJECTS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS) $(LDFLAGS)
+
+%.o: %.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+	rm -rf $(SRC_DIR)/*.o
+
+.PHONY: clean
+
