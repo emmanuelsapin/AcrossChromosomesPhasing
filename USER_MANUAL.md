@@ -183,6 +183,32 @@ ls -lh output/
   - Relative identification results
   - Execution statistics
 
+#### `-ListIndiv <path>`
+- **Description**: Path to a file containing a list of individual IDs to process
+- **Type**: String (file path)
+- **Default**: Not specified (all individuals are processed)
+- **Example**: `-ListIndiv ./liste_individus.txt`
+- **File Format**: Text file with one individual ID per line (0-based indexing)
+- **Features**:
+  - Empty lines are ignored
+  - Comments (lines starting with `#`) are ignored
+  - Individual IDs must be in range [0, NbIndiv)
+  - Invalid IDs are skipped with a warning
+- **Use Cases**:
+  - Process only a subset of individuals for testing
+  - Reduce computation time by focusing on specific individuals
+  - Reproduce analyses on specific individuals
+- **Example File Content**:
+  ```
+  # List of individuals to process
+  0
+  10
+  20
+  30
+  50
+  ```
+- **Note**: When specified, only the listed individuals are processed and written to output files. All genomic data is still loaded in memory (required for relationship calculations).
+
 ### Complete Example
 
 ```bash
@@ -191,6 +217,16 @@ ls -lh output/
   -PathInput /large/dataset/genomes/ \
   -PathOutput /results/phased_genomes/ \
   -PathMAF /data/MAF.txt \
+  -Verbose 1
+```
+
+**Example with Individual List:**
+```bash
+./ProgramPhasing_Modular \
+  -NbIndiv 10000 \
+  -PathInput /large/dataset/genomes/ \
+  -PathOutput /results/phased_genomes/ \
+  -ListIndiv ./liste_individus.txt \
   -Verbose 1
 ```
 
@@ -329,6 +365,50 @@ done
 wait
 ```
 
+### Processing a Subset of Individuals
+
+Use `-ListIndiv` to process only specific individuals. This is useful for:
+- Testing and debugging on a small subset
+- Focusing on specific individuals of interest
+- Reducing computation time
+- Reproducing analyses on selected individuals
+
+**Step 1: Create a list file** (`liste_individus.txt`):
+```
+# List of individuals to process
+# Format: One ID per line (0-based indexing)
+# Comments and empty lines are ignored
+
+0
+10
+20
+30
+50
+100
+```
+
+**Step 2: Run with the list:**
+```bash
+./ProgramPhasing_Modular \
+  -NbIndiv 1000 \
+  -PathInput ./input/ \
+  -PathOutput ./output/ \
+  -ListIndiv ./liste_individus.txt \
+  -Verbose 1
+```
+
+**Output:**
+- Only the specified individuals are processed
+- Output files contain only these individuals
+- Processing time is reduced proportionally
+- Progress shows: `start individual: X (Y/Z)` where Y is current position and Z is total
+
+**Important Notes:**
+- All genomic data is still loaded in memory (required for relationship calculations)
+- Individual IDs must be in range [0, NbIndiv)
+- Invalid IDs are skipped with a warning
+- If no valid IDs are found, the program exits with an error
+
 ### Logging Output
 
 Save execution log:
@@ -381,6 +461,33 @@ ERROR: Number of individuals is zero or undefined
 2. Verify value is between 1 and 100,000
 3. Ensure value matches actual data
 
+### Problem: "Failed to read individual list file"
+
+**Symptoms:**
+```
+ERROR: Could not open file ./liste_individus.txt for reading individual list
+ERROR: Failed to read individual list file. Exiting.
+```
+
+**Solutions:**
+1. Verify the file path is correct
+2. Check file permissions: `chmod +r ./liste_individus.txt`
+3. Ensure the file exists: `ls -la ./liste_individus.txt`
+4. Check file format: one ID per line, starting from 0
+
+### Problem: "No valid individual IDs found"
+
+**Symptoms:**
+```
+ERROR: No valid individual IDs found in file ./liste_individus.txt
+```
+
+**Solutions:**
+1. Verify IDs are in range [0, NbIndiv)
+2. Check file format (one ID per line)
+3. Ensure IDs are numeric (not text)
+4. Remove any invalid entries from the list file
+
 ### Problem: Slow Performance
 
 **Symptoms:**
@@ -412,6 +519,24 @@ ERROR: Number of individuals is zero or undefined
 ### Q: Can I process only specific chromosomes?
 
 **A:** The current version processes all chromosomes 1-22. For selective processing, modify the source code or use separate input directories.
+
+### Q: Can I process only specific individuals?
+
+**A:** Yes! Use the `-ListIndiv` parameter with a file containing individual IDs (one per line). This allows you to:
+- Test on a small subset before processing the full dataset
+- Focus on specific individuals of interest
+- Reduce computation time
+- Reproduce analyses on selected individuals
+
+Example:
+```bash
+# Create liste_individus.txt with IDs: 0, 10, 20, 30
+./ProgramPhasing_Modular \
+  -NbIndiv 1000 \
+  -PathInput ./input/ \
+  -PathOutput ./output/ \
+  -ListIndiv ./liste_individus.txt
+```
 
 ### Q: How long does phasing take?
 

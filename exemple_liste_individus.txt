@@ -1,0 +1,14 @@
+# Fichier d'exemple : Liste d'individus à traiter
+# Format : Un ID d'individu par ligne (indexation à partir de 0)
+# Les lignes vides et les commentaires (commençant par #) sont ignorés
+
+# Exemple : traiter seulement les individus 0, 5, 10, 15, 20
+0
+5
+10
+15
+20
+
+# Vous pouvez aussi ajouter des commentaires pour documenter
+# Les IDs doivent être entre 0 et (NbIndiv - 1)
+

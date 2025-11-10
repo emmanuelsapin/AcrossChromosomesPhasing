@@ -64,6 +64,10 @@ int genomeoffpss[3][NSNPPERCHR][23];
 
 int NbIndiv=0;
 
+// Liste des individus à traiter (si spécifiée)
+std::vector<int> listIndivToProcess;
+bool useListIndiv = false;
+
 unsigned char * genomes[23];
 
 typedef struct
@@ -1778,6 +1782,59 @@ int compareressultindivallcombinV15D4(int ID,int chr1, int chr2,int numtrio,floa
 	return (0);
 }
 
+/**
+ * @brief Lit un fichier contenant une liste d'individus à traiter
+ * @param filename Chemin vers le fichier contenant les IDs d'individus (un par ligne)
+ * @return 0 en cas de succès, 1 en cas d'erreur
+ */
+int readListIndiv(const char* filename)
+{
+	FILE *fp = fopen(filename, "r");
+	if (fp == NULL)
+	{
+		printf("ERROR: Could not open file %s for reading individual list\n", filename);
+		return 1;
+	}
+	
+	listIndivToProcess.clear();
+	char line[256];
+	int lineNum = 0;
+	
+	while (fgets(line, sizeof(line), fp) != NULL)
+	{
+		lineNum++;
+		// Ignorer les lignes vides et les commentaires (commençant par #)
+		if (line[0] == '\n' || line[0] == '#' || line[0] == '\r')
+			continue;
+		
+		// Lire l'ID de l'individu
+		int indivID = atoi(line);
+		
+		// Vérifier que l'ID est valide
+		if (indivID < 0 || indivID >= NbIndiv)
+		{
+			printf("WARNING: Individual ID %d on line %d is out of range [0, %d). Skipping.\n", 
+				   indivID, lineNum, NbIndiv);
+			continue;
+		}
+		
+		listIndivToProcess.push_back(indivID);
+	}
+	
+	fclose(fp);
+	
+	if (listIndivToProcess.empty())
+	{
+		printf("ERROR: No valid individual IDs found in file %s\n", filename);
+		return 1;
+	}
+	
+	printf("Successfully loaded %zu individuals from file %s\n", 
+		   listIndivToProcess.size(), filename);
+	useListIndiv = true;
+	return 0;
+}
+
 int writeoutput(int chr, char pathoutput[] )
 {	FILE *fp;
     char filename[200];
@@ -1793,17 +1850,35 @@ int writeoutput(int chr, char pathoutput[] )
         return (0);
     };
 	int32_t person;
-	for(person=0;person<NbIndiv;person++)
-	{	fprintf(fp,	"%d %d 0 0 -9 0 ",person,person);
-		for(int snp=0;snp<nbsnpperchrinfile[chr];snp++)
-		{	int geno=(*((genomes[chr]+(unsigned long long) person*(nbsnpperchr[chr]/4+((nbsnpperchr[chr]%4)>0)) )+snp/4)>>(((snp%4)*2)))&3;
-
-			geno=rand()%4;
-
-			fprintf(fp, "%d %d ", geno%2, geno/2);
+	
+	// Si une liste d'individus est spécifiée, n'écrire que ceux-là
+	if (useListIndiv)
+	{
+		for(size_t i = 0; i < listIndivToProcess.size(); i++)
+		{
+			person = listIndivToProcess[i];
+			fprintf(fp,	"%d %d 0 0 -9 0 ",person,person);
+			for(int snp=0;snp<nbsnpperchrinfile[chr];snp++)
+			{	int geno=(*((genomes[chr]+(unsigned long long) person*(nbsnpperchr[chr]/4+((nbsnpperchr[chr]%4)>0)) )+snp/4)>>(((snp%4)*2)))&3;
+				geno=rand()%4;
+				fprintf(fp, "%d %d ", geno%2, geno/2);
+			};
+			fprintf(fp,"\n");
+		}
+	}
+	else
+	{
+		// Comportement original : écrire tous les individus
+		for(person=0;person<NbIndiv;person++)
+		{	fprintf(fp,	"%d %d 0 0 -9 0 ",person,person);
+			for(int snp=0;snp<nbsnpperchrinfile[chr];snp++)
+			{	int geno=(*((genomes[chr]+(unsigned long long) person*(nbsnpperchr[chr]/4+((nbsnpperchr[chr]%4)>0)) )+snp/4)>>(((snp%4)*2)))&3;
+				geno=rand()%4;
+				fprintf(fp, "%d %d ", geno%2, geno/2);
+			};
+			fprintf(fp,"\n");
 		};
-		fprintf(fp,"\n");
-	};
+	}
 	fclose (fp);
 	return (0);
 }
@@ -1814,13 +1889,14 @@ int main(int argc, char *argv[])
 	int chrtodo1;
 	char PathInput[200];
 	char PathOutput[200];
+	char PathListIndiv[200] = "";
+	
 	for(int input=1;input<argc;input++)
 	{
-
 		if( strncmp(argv[input], "-NbIndiv", strlen("-NbIndiv")) == 0 && input < argc-1) NbIndiv = atoi(argv[++input]);
 		else if( strncmp(argv[input], "-PathInput", strlen("-PathInput")) == 0 && input < argc-1) strcpy(PathInput,argv[++input]);
 		else if( strncmp(argv[input], "-PathOutput", strlen("-PathOutput")) == 0 && input < argc-1) strcpy(PathOutput,argv[++input]);
-
+		else if( strncmp(argv[input], "-ListIndiv", strlen("-ListIndiv")) == 0 && input < argc-1) strcpy(PathListIndiv,argv[++input]);
 	};
 	if (NbIndiv==0)
 	{	printf("ERROR: Number of indivudals is zero or undefined\n");
@@ -1867,9 +1943,44 @@ int main(int argc, char *argv[])
 		readgenomelocal(PathInput,chrtemp1,100+chrtemp1,105,genomes[chrtemp1]);
 
 	};
-	for (int indiv=0;indiv<NbIndiv;indiv++)
-	{	int ID=indiv;
-		printf("start individual: %d\n",indiv);
+	
+	// Lire la liste d'individus si spécifiée
+	if (strlen(PathListIndiv) > 0)
+	{
+		if (readListIndiv(PathListIndiv) != 0)
+		{
+			printf("ERROR: Failed to read individual list file. Exiting.\n");
+			exit(1);
+		}
+		printf("Processing only %zu individuals from the list\n", listIndivToProcess.size());
+	}
+	else
+	{
+		printf("Processing all %d individuals\n", NbIndiv);
+	}
+	
+	// Déterminer quels individus traiter
+	std::vector<int> indivsToProcess;
+	if (useListIndiv)
+	{
+		indivsToProcess = listIndivToProcess;
+	}
+	else
+	{
+		// Traiter tous les individus
+		for (int i = 0; i < NbIndiv; i++)
+		{
+			indivsToProcess.push_back(i);
+		}
+	}
+	
+	// Traiter chaque individu de la liste
+	for (size_t idx = 0; idx < indivsToProcess.size(); idx++)
+	{
+		int indiv = indivsToProcess[idx];
+		int ID = indiv;
+		printf("start individual: %d (%zu/%zu)\n", indiv, idx+1, indivsToProcess.size());
+		
 		loadsegment( indiv,
 						indiv,
 						indiv,
