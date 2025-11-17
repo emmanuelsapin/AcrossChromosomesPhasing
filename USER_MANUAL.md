@@ -14,6 +14,8 @@
 10. [Troubleshooting](#troubleshooting)
 11. [Performance Tips](#performance-tips)
 12. [Examples](#examples)
+13. [Additional Resources](#additional-resources)
+14. [Appendix](#appendix)
 
 ---
 
@@ -556,7 +558,7 @@ The program implements two main phasing methods:
    - Allocate memory for genomes
 
 3. **For Each Individual**:
-   - Load segments and calculate relationships
+   - Find relatives and calculate PI-HAT scores (using `findrelative` function)
    - Determine phasing method (with/without parents)
    - Execute phasing algorithm
    - Store phased haplotypes
@@ -567,10 +569,34 @@ The program implements two main phasing methods:
 
 ### Key Algorithms
 
-- **Relationship detection**: Calculates PI-HAT (relatedness coefficient) between individuals
-- **Segment identification**: Identifies shared segments between relatives
+- **Relationship detection** (`findrelative`): Calculates PI-HAT (relatedness coefficient) between individuals and identifies relatives
+- **Minor Allele Frequency calculation**: Computes MAF for each SNP across all individuals
+- **PI-HAT normalization**: Normalizes relatedness scores across all chromosomes
+- **Window management**: Creates and configures chromosome windows (fixed or ~3000 SNP windows)
+- **Phase error probability calculation**: Computes probabilities for different phase configurations
 - **Cross-chromosome correlation**: Analyzes correlations between chromosome segments
-- **Iterative refinement**: Improves phasing through multiple iterations
+- **Window merging**: Merges highly correlated windows to improve phasing
+- **Phase assignment**: Assigns phases to chromosome windows based on correlations and constraints
+- **Iterative refinement**: Improves phasing through multiple generations/iterations
+
+### Algorithm Documentation
+
+For a complete algorithmic description with detailed pseudocode, see **article.tex**. This LaTeX document contains:
+- 30+ interconnected algorithms using the `algorithm2e` package
+- Complete workflow decomposition from main program to individual functions
+- Cross-references between algorithms showing data flow
+- Detailed descriptions of:
+  - File I/O operations (HAP and PED formats)
+  - Relationship detection and PI-HAT calculation
+  - Phasing algorithms (with and without parents)
+  - Window management and phase assignment
+  - Correlation calculations and window merging
+
+To compile the LaTeX documentation:
+```bash
+pdflatex article.tex
+pdflatex article.tex  # Run twice for cross-references
+```
 
 ---
 
@@ -887,6 +913,7 @@ EOF
 - **README.md**: Project overview and quick start
 - **README_GENERATOR.md**: Data generator documentation
 - **README_PED_FORMAT.md**: Detailed PED format specification
+- **article.tex**: Complete algorithmic documentation in LaTeX format with 30+ interconnected algorithms, pseudocode, and cross-references
 
 ### Getting Help
 
@@ -943,6 +970,18 @@ Defined in `types.h`:
 - `MAXPOP`: Maximum population size (435188)
 - `NBINDIVMAX`: Maximum individuals (100000)
 - `MAXCLOSERELAT`: Maximum close relatives (6000)
+
+### E. Recent Updates
+
+**Version 2.0 Changes**:
+- **Function renaming**: `loadsegment` → `findrelative` for better clarity
+  - The function now clearly indicates its purpose: finding relatives and calculating PI-HAT scores
+- **Enhanced documentation**: Added comprehensive LaTeX algorithm documentation (`article.tex`)
+  - 30+ algorithms with cross-references
+  - Complete workflow decomposition
+  - Detailed pseudocode for all major functions
+- **Improved error handling**: Better validation in file writing functions
+- **Makefile improvements**: Enhanced dependency tracking for automatic recompilation
 
 ---
 

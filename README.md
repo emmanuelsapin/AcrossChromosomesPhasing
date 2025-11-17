@@ -68,7 +68,8 @@ The program uses object-oriented design with modular libraries for file I/O and 
 ├── README.md                # This file
 ├── USER_MANUAL.md           # Comprehensive user manual
 ├── README_GENERATOR.md      # Data generator documentation
-└── README_PED_FORMAT.md     # PED format documentation
+├── README_PED_FORMAT.md     # PED format documentation
+└── article.tex              # LaTeX documentation with algorithm descriptions
 ```
 
 ## Installation
@@ -153,6 +154,7 @@ Results will be written to:
 - **[USER_MANUAL.md](USER_MANUAL.md)**: Comprehensive user manual with detailed explanations
 - **[README_GENERATOR.md](README_GENERATOR.md)**: Data generator documentation
 - **[README_PED_FORMAT.md](README_PED_FORMAT.md)**: PED file format specifications
+- **[article.tex](article.tex)**: Complete algorithmic documentation in LaTeX format using algorithm2e package, with 30+ interconnected algorithms and cross-references
 
 ## File Formats
 
@@ -320,10 +322,16 @@ If you use this software in your research, please cite:
 
 ## Version History
 
-- **Current Version**: [Version number]
+- **Current Version**: 2.0
+- **Recent Updates**:
+  - Renamed `loadsegment` function to `findrelative` for clarity
+  - Added comprehensive LaTeX algorithm documentation (`article.tex`)
+  - Improved error handling in file writing functions
+  - Enhanced Makefile dependencies for better compilation tracking
 - **Features**: 
   - Support for HAP and PED file formats
   - Parent-aware phasing
   - Selective individual processing
   - Modular library architecture
   - Random data generator
+  - Complete algorithmic documentation with cross-references
