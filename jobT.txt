@@ -1,0 +1,2 @@
+             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+          21604075 blanca-ib transfer emsa1620  R   11:59:42      1 bnode0111

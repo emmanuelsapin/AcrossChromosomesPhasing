@@ -1,0 +1,14 @@
+﻿int predict_phasing_with_parents_providing_GT(int ID, int chr1, int chr2, int numtrio, float limitnbsnp, int run, int IDp1loop, int IDp2loop, int lenminseg, int version, int gentostart, char pathresult[])
+{
+	return g_program.predict_phasing_with_parents_providing_GT(ID, chr1, chr2, numtrio, limitnbsnp, run, IDp1loop, IDp2loop, lenminseg, version, gentostart, pathresult);
+}
+
+int writeoutput(int chr, char pathoutput[])
+{
+	return g_program.writeoutput(chr, pathoutput);
+}
+
+int main(int argc, char* argv[])
+{
+	return g_program.run(argc, argv);
+}
