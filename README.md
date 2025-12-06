@@ -1,6 +1,6 @@
 # Haplotype Phasing Engine
 
-A professional haplotype phasing engine for genetic data analysis using relative-based inference algorithms. This project provides a comprehensive object-oriented framework for processing genomic data and identifying haplotype phases.
+A professional haplotype phasing engine for genetic data analysis using relative-based inference algorithms. This project provides a comprehensive object-oriented framework for processing genomic data and identifying haplotype phases. 
 
 ## Features
 
@@ -12,6 +12,7 @@ A professional haplotype phasing engine for genetic data analysis using relative
 - **PIHAT Computation**: Advanced relative identification using PIHAT matrices
 - **Configuration Management**: Flexible command-line configuration
 - **Data Generator**: Random data generator for testing (1000 individuals, 1000 SNPs per chromosome)
+- **Video Presentation**: Possible executions of the algorithm are depicted in brief video demonstrations, illustrating the interactions among the various constituent elements.
 
 ## Table of Contents
 
