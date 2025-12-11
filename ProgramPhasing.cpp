@@ -1665,10 +1665,10 @@ int compareressultindivallcombinV15D4(int ID,int chr1, int chr2,int numtrio,floa
 													dividmax2=chrdividerrun2;
 													printf("NB1 %d MB2 %d c %f \n",nbingroup[chrtemp1][chrdividerrun],nbingroup[chrtemp2][chrdividerrun2],corglob);
 													if (nbingroup[chrtemp1][chrdividerrun]==1 || nbingroup[chrtemp2][chrdividerrun2]==1)
-													{	int chrone=(nbingroup[chrtemp1][chrdividerrun]==1)?chrtemp2:chrtemp1;
+													{	int chrone=(nbingroup[chrtemp1][chrdividerrun]!=1)?chrtemp2:chrtemp1;
 														int chrdividerrunone=(nbingroup[chrtemp1][chrdividerrun]!=1)?chrdividerrun2:chrdividerrun;
 														int chrnotone=(nbingroup[chrtemp1][chrdividerrun]==1)?chrtemp2:chrtemp1;
-														int chrdividerrunnotone=(nbingroup[chrtemp1][chrdividerrun]!=1)?chrdividerrun2:chrdividerrun;
+														int chrdividerrunnotone=(nbingroup[chrtemp1][chrdividerrun]==1)?chrdividerrun2:chrdividerrun;
 
 														printf("1 is %d %d\n",chrnotone,chrdividerrunnotone);
 														int numberattached=0;
