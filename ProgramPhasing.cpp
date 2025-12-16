@@ -788,7 +788,7 @@ int compareressultindivallcombinV15D4(int ID,int chr1, int chr2,int numtrio,floa
 									int endlastsegment[4]={-1};
 									double ratetoconsiderseg=0.0001;
 									double ratetoconsidersegPE=ratetoconsiderseg*2;
-									ratetoconsiderseg=0.0002;
+									ratetoconsiderseg=0.00001;
 									ratetoconsidersegPE=2*ratetoconsiderseg;
 									int phaseerrorpossible[4]={0};
 									int breaknubercm=25;
