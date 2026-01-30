@@ -6,7 +6,7 @@
 #include <math.h>
 #include <vector>
 #include <errno.h>
-#include <sys/ipc.h>
+#include <sys/ipc.h> 
 #include <sys/shm.h>
 #include <sys/sysinfo.h>
 #include <unistd.h>
