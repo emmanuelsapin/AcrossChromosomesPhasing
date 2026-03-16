@@ -4,21 +4,22 @@
  * 
  * This program generates random HAP, PED, and MAF files for testing the phasing algorithm.
  * It generates data for 1000 individuals and 1000 SNPs per chromosome (chromosomes 1-22).
+ * Individual 0 is the offspring of individuals 1 and 2 (trio structure).
  * 
  * Usage:
  *   ./GenerateRandomData <output_path> [format]
  * 
  * Parameters:
  *   output_path: Base path for output files (e.g., "data/chr")
- *   format: Optional - "HAP" (default) or "PED" to specify output format
+ *   format: Optional - "HAP", "PED", or "BOTH" (default) - HAP and PED represent same data
  * 
- * Output files:
- *   HAP format (default):
- *     - <output_path>1.hap, <output_path>2.hap, ..., <output_path>22.hap (HAP files)
+ * Output files (HAP and PED represent the same data when BOTH):
+ *     - <output_path>1.haps, <output_path>2.haps, ..., <output_path>22.haps (HAP files)
  *     - <output_path>1.maf, <output_path>2.maf, ..., <output_path>22.maf (MAF files)
  *   PED format:
  *     - <output_path>1.ped, <output_path>2.ped, ..., <output_path>22.ped (PED files)
  *     - <output_path>1.maf, <output_path>2.maf, ..., <output_path>22.maf (MAF files)
+ *   Window file (always): recombinaisonWindows.txt in same directory (windows 0-500, 500-1000 per chr)
  */
 
 #include <stdio.h>
@@ -40,6 +41,12 @@
 #define NUM_CHROMOSOMES 22
 #define MIN_ALLELE_FREQ 0.05  // Minimum allele frequency (for alternate allele)
 #define MAX_ALLELE_FREQ 0.95  // Maximum allele frequency (for alternate allele)
+#define BOUNDS_BREAK_AT_SNP 500  // Segment break for recombinaisonWindows.txt (windows 0-500, 500-1000)
+
+// Trio: individual 0 = offspring of individuals 1 and 2 (parents)
+#define IDX_OFFSPRING 0
+#define IDX_PARENT1   1
+#define IDX_PARENT2   2
 
 /**
  * @brief Generate a random double between 0 and 1
@@ -205,6 +212,105 @@ void genotype_to_alleles(int genotype, int* allele1, int* allele2)
 	}
 }
 
+int create_directory_if_needed(const char* path);  /* forward */
+
+/**
+ * @brief Generate genotype data for one chromosome (same data used for HAP and PED).
+ * Individual 0 = offspring of 1 and 2. One recombination event per chr: at crossover_snp
+ * the transmitted haplotype from each parent switches.
+ */
+void generate_chromosome_data(int chr, double* maf_array, unsigned char (*data)[NUM_SNPS_PER_CHR][2])
+{
+	int which_hap_from_p1 = rand() % 2;
+	int which_hap_from_p2 = rand() % 2;
+	/* One recombination: crossover between SNP 1 and NUM_SNPS_PER_CHR-1 */
+	int crossover_snp = 1 + rand() % (NUM_SNPS_PER_CHR - 2);
+	
+	for (int snp = 0; snp < NUM_SNPS_PER_CHR; snp++)
+	{
+		int geno_parent1 = generate_genotype(maf_array[snp]);
+		int geno_parent2 = generate_genotype(maf_array[snp]);
+		int p1_a1, p1_a2, p2_a1, p2_a2;
+		genotype_to_alleles(geno_parent1, &p1_a1, &p1_a2);
+		genotype_to_alleles(geno_parent2, &p2_a1, &p2_a2);
+		
+		/* After crossover, switch which haplotype each parent transmits */
+		int h1 = which_hap_from_p1;
+		int h2 = which_hap_from_p2;
+		if (snp >= crossover_snp) {
+			h1 = 1 - which_hap_from_p1;
+			h2 = 1 - which_hap_from_p2;
+		}
+		
+		for (int indiv = 0; indiv < NUM_INDIVIDUALS; indiv++)
+		{
+			if (indiv == IDX_OFFSPRING)
+			{
+				data[indiv][snp][0] = (unsigned char)(h1 ? p1_a2 : p1_a1);
+				data[indiv][snp][1] = (unsigned char)(h2 ? p2_a2 : p2_a1);
+			}
+			else if (indiv == IDX_PARENT1)
+			{
+				data[indiv][snp][0] = (unsigned char)p1_a1;
+				data[indiv][snp][1] = (unsigned char)p1_a2;
+			}
+			else if (indiv == IDX_PARENT2)
+			{
+				data[indiv][snp][0] = (unsigned char)p2_a1;
+				data[indiv][snp][1] = (unsigned char)p2_a2;
+			}
+			else
+			{
+				int g = generate_genotype(maf_array[snp]);
+				int a1, a2;
+				genotype_to_alleles(g, &a1, &a2);
+				data[indiv][snp][0] = (unsigned char)a1;
+				data[indiv][snp][1] = (unsigned char)a2;
+			}
+		}
+	}
+}
+
+/**
+ * @brief Write recombinaisonWindows.txt (window coordinates for acrossCHRphasing).
+ * Format: one line per chr (0-22), "chr b0 b1 b2 b3 b4". -1 = end of chr.
+ * Windows: 0-500 and 500-1000 per chromosome.
+ */
+static int write_window_file(const char* output_path)
+{
+	char filename[512];
+	const char *last = strrchr(output_path, '/');
+#ifdef _WIN32
+	if (!last) last = strrchr(output_path, '\\');
+#endif
+	if (last) {
+		size_t len = (size_t)(last - output_path + 1);
+		if (len + 30 < sizeof(filename)) {
+			strncpy(filename, output_path, len);
+			filename[len] = '\0';
+			strcat(filename, "recombinaisonWindows.txt");
+		} else
+			strcpy(filename, "recombinaisonWindows.txt");
+	} else
+		strcpy(filename, "recombinaisonWindows.txt");
+
+	create_directory_if_needed(filename);
+	FILE *fp = fopen(filename, "w");
+	if (!fp) {
+		printf("ERROR: Cannot create %s\n", filename);
+		return 1;
+	}
+	fprintf(fp, "# Segment boundary positions. Format: chr bound1 bound2 bound3 bound4 bound5\n");
+	fprintf(fp, "# -1 = end of chromosome. Windows: 0-%d and %d-%d\n",
+		BOUNDS_BREAK_AT_SNP, BOUNDS_BREAK_AT_SNP, NUM_SNPS_PER_CHR);
+	fprintf(fp, "0 0 0 0 0\n");
+	for (int chr = 1; chr <= NUM_CHROMOSOMES; chr++)
+		fprintf(fp, "%d %d -1 0 0 0\n", chr, BOUNDS_BREAK_AT_SNP);
+	fclose(fp);
+	printf("Wrote window file: %s (windows 0-%d, %d-%d per chr)\n", filename, BOUNDS_BREAK_AT_SNP, BOUNDS_BREAK_AT_SNP, NUM_SNPS_PER_CHR);
+	return 0;
+}
+
 /**
  * @brief Create directory if it doesn't exist
  * @param path File path (directory will be extracted from this)
@@ -244,28 +350,20 @@ int create_directory_if_needed(const char* path)
 }
 
 /**
- * @brief Generate a HAP file for a specific chromosome
- * @param output_path Base path for output files
- * @param chr Chromosome number (1-22)
- * @param maf_array Optional: Pre-computed MAF values (NULL to generate randomly)
- * @return 0 on success, 1 on error
+ * @brief Write a HAP file from pre-generated genotype data
  */
-int generate_hap_file(const char* output_path, int chr, double* maf_array)
+int write_hap_file(const char* output_path, int chr, double* maf_array, unsigned char (*data)[NUM_SNPS_PER_CHR][2])
 {
 	char filename[300];
 	FILE* fp;
 	
-	// Construct filename: <output_path><chr>.hap
 	strcpy(filename, output_path);
 	char chr_str[10];
 	sprintf(chr_str, "%d", chr);
 	strcat(filename, chr_str);
 	strcat(filename, ".hap");
 	
-	// Create directory if needed
 	create_directory_if_needed(filename);
-	
-	// Open file for writing
 	fp = fopen(filename, "w");
 	if (fp == NULL)
 	{
@@ -273,103 +371,27 @@ int generate_hap_file(const char* output_path, int chr, double* maf_array)
 		return 1;
 	}
 	
-	printf("Generating HAP file: %s (chromosome %d, %d SNPs, %d individuals)\n", 
+	printf("Writing HAP file: %s (chromosome %d, %d SNPs, %d individuals)\n", 
 		filename, chr, NUM_SNPS_PER_CHR, NUM_INDIVIDUALS);
 	
-	// Generate or use pre-computed MAF for this chromosome
-	double maf[NUM_SNPS_PER_CHR];
-	if (maf_array != NULL)
-	{
-		// Use pre-computed MAF values
-		for (int snp = 0; snp < NUM_SNPS_PER_CHR; snp++)
-		{
-			maf[snp] = maf_array[snp];
-		}
-	}
-	else
-	{
-		// Generate random allele frequencies and compute MAF
-		// Allele frequencies are between MIN_ALLELE_FREQ (0.05) and MAX_ALLELE_FREQ (0.95)
-		// MAF will be between 0.05 and 0.5
-		for (int snp = 0; snp < NUM_SNPS_PER_CHR; snp++)
-		{
-			maf[snp] = generate_allele_frequency();
-		}
-	}
-	
-	// Generate each SNP in Relate .haps format
-	// Format: Chromosome SNP_ID Position Ancestral_allele Alternative_allele allele1_indiv1 allele2_indiv1 ...
-	// Reference: https://myersgroup.github.io/relate/input_data.html
 	for (int snp = 0; snp < NUM_SNPS_PER_CHR; snp++)
 	{
-		// Generate rsID
 		char rsid[50];
 		generate_rsid(chr, snp, rsid);
-		
-		// Generate position
 		int position = generate_position(chr, snp);
-		
-		// Generate ancestral and alternative alleles (randomly choose A, C, G, T)
-		// For simplicity, we'll use A as ancestral and G as alternative
-		// In real data, these would come from reference genome
 		char ancestral_allele = 'A';
 		char alternative_allele = 'G';
 		
-		// Write Relate .haps format:
-		// Column 1: Chromosome number [integer]
-		// Column 2: SNP ID [string]
-		// Column 3: SNP position [integer]
-		// Column 4: Ancestral allele [char] (represented as 0 in haplotypes)
-		// Column 5: Alternative allele [char] (represented as 1 in haplotypes)
-		// Columns 6+: Two alleles per individual (0 = ancestral, 1 = alternative)
 		fprintf(fp, "%d %s %d %c %c", chr, rsid, position, ancestral_allele, alternative_allele);
 		
-		// Debug: count genotypes for first SNP
-		int debug_geno_count[5] = {0, 0, 0, 0, 0};
-		int debug_alt_alleles = 0;
-		
-		// Generate and write haplotypes for all individuals
 		for (int indiv = 0; indiv < NUM_INDIVIDUALS; indiv++)
 		{
-			// Generate genotype based on MAF
-			int genotype = generate_genotype(maf[snp]);
-			
-			// Debug: count genotypes
-			if (snp == 0 && chr == 1 && genotype < 5)
-			{
-				debug_geno_count[genotype]++;
-			}
-			
-			// Convert to allele pair
-			int allele1, allele2;
-			genotype_to_alleles(genotype, &allele1, &allele2);
-			
-			// Debug: count alternate alleles
-			if (snp == 0 && chr == 1)
-			{
-				debug_alt_alleles += allele1 + allele2;
-			}
-			
-			// In Relate format: 0 = ancestral allele, 1 = alternative allele
-			// Write both alleles separated by space
-			fprintf(fp, " %d %d", allele1, allele2);
+			fprintf(fp, " %d %d", data[indiv][snp][0], data[indiv][snp][1]);
 		}
-		
-		// Debug: print statistics for first SNP
-		if (snp == 0 && chr == 1)
-		{
-			printf("  DEBUG SNP 0: MAF=%.6f, genotypes: 0=%d, 1=%d, 2=%d, 3=%d, 4=%d, alt_alleles=%d/2000\n",
-				maf[snp], debug_geno_count[0], debug_geno_count[1], debug_geno_count[2], 
-				debug_geno_count[3], debug_geno_count[4], debug_alt_alleles);
-		}
-		
 		fprintf(fp, "\n");
 		
-		// Progress indicator
 		if ((snp + 1) % 100 == 0)
-		{
-			printf("  Progress: %d/%d SNPs\n", snp + 1, NUM_SNPS_PER_CHR);
-		}
+			printf("  HAP progress: %d/%d SNPs\n", snp + 1, NUM_SNPS_PER_CHR);
 	}
 	
 	fclose(fp);
@@ -443,28 +465,20 @@ int generate_maf_file(const char* output_path, int chr, double* maf_array)
 }
 
 /**
- * @brief Generate a PED file for a specific chromosome
- * @param output_path Base path for output files
- * @param chr Chromosome number (1-22)
- * @param maf_array Pre-computed MAF values for each SNP
- * @return 0 on success, 1 on error
+ * @brief Write a PED file from pre-generated genotype data
  */
-int generate_ped_file(const char* output_path, int chr, double maf_array[])
+int write_ped_file(const char* output_path, int chr, unsigned char (*data)[NUM_SNPS_PER_CHR][2])
 {
 	char filename[300];
 	FILE* fp;
 	
-	// Construct filename: <output_path><chr>.ped
 	strcpy(filename, output_path);
 	char chr_str[10];
 	sprintf(chr_str, "%d", chr);
 	strcat(filename, chr_str);
 	strcat(filename, ".ped");
 	
-	// Create directory if needed
 	create_directory_if_needed(filename);
-	
-	// Open file for writing
 	fp = fopen(filename, "w");
 	if (fp == NULL)
 	{
@@ -472,40 +486,24 @@ int generate_ped_file(const char* output_path, int chr, double maf_array[])
 		return 1;
 	}
 	
-	printf("Generating PED file: %s (chromosome %d, %d SNPs, %d individuals)\n", 
+	printf("Writing PED file: %s (chromosome %d, %d SNPs, %d individuals)\n", 
 		filename, chr, NUM_SNPS_PER_CHR, NUM_INDIVIDUALS);
 	
-	// Generate each individual
 	for (int indiv = 0; indiv < NUM_INDIVIDUALS; indiv++)
 	{
-		// Write PED header: Family_ID Individual_ID Father_ID Mother_ID Sex Phenotype
-		fprintf(fp, "%d %d 0 0 -9 0", indiv, indiv);
-		
-		// Generate and write genotypes for all SNPs
+		int father_id = (indiv == IDX_OFFSPRING) ? IDX_PARENT1 : 0;
+		int mother_id = (indiv == IDX_OFFSPRING) ? IDX_PARENT2 : 0;
+		fprintf(fp, "%d %d %d %d -9 0", indiv, indiv, father_id, mother_id);
 		for (int snp = 0; snp < NUM_SNPS_PER_CHR; snp++)
-		{
-			// Generate genotype based on MAF
-			int genotype = generate_genotype(maf_array[snp]);
-			
-			// Convert to allele pair
-			int allele1, allele2;
-			genotype_to_alleles(genotype, &allele1, &allele2);
-			
-			// Write alleles in PED format: space allele1 space allele2
-			fprintf(fp, " %d %d", allele1, allele2);
-		}
-		
+			fprintf(fp, " %d %d", data[indiv][snp][0], data[indiv][snp][1]);
 		fprintf(fp, "\n");
 		
-		// Progress indicator
 		if ((indiv + 1) % 100 == 0)
-		{
-			printf("  Progress: %d/%d individuals\n", indiv + 1, NUM_INDIVIDUALS);
-		}
+			printf("  PED progress: %d/%d individuals\n", indiv + 1, NUM_INDIVIDUALS);
 	}
 	
 	fclose(fp);
-	printf("Successfully generated PED file: %s\n", filename);
+	printf("Successfully wrote PED file: %s\n", filename);
 	return 0;
 }
 
@@ -522,7 +520,7 @@ int main(int argc, char* argv[])
 	{
 		printf("Usage: %s <output_path> [format]\n", argv[0]);
 		printf("  output_path: Base path for output files (e.g., 'data/chr')\n");
-		printf("  format: Optional - 'HAP' (default) or 'PED' to specify output format\n");
+		printf("  format: Optional - 'HAP', 'PED', or 'BOTH' (default) - HAP and PED = same data\n");
 		printf("\n");
 		printf("This program generates random data for:\n");
 		printf("  - %d individuals\n", NUM_INDIVIDUALS);
@@ -532,7 +530,7 @@ int main(int argc, char* argv[])
 	}
 	
 	const char* output_path = argv[1];
-	int output_format = 0;  // 0 = HAP, 1 = PED
+	int output_format = 2;  // 0 = HAP only, 1 = PED only, 2 = BOTH (default)
 	
 	// Check for format argument
 	if (argc >= 3)
@@ -541,10 +539,10 @@ int main(int argc, char* argv[])
 			output_format = 1;
 		else if (strcmp(argv[2], "HAP") == 0 || strcmp(argv[2], "hap") == 0)
 			output_format = 0;
+		else if (strcmp(argv[2], "BOTH") == 0 || strcmp(argv[2], "both") == 0)
+			output_format = 2;
 		else
-		{
-			printf("WARNING: Unknown format '%s', using default (HAP)\n", argv[2]);
-		}
+			printf("WARNING: Unknown format '%s', using default (BOTH)\n", argv[2]);
 	}
 	
 	// Initialize random number generator
@@ -554,54 +552,64 @@ int main(int argc, char* argv[])
 	printf("Random Data Generator for Phasing Program\n");
 	printf("========================================\n");
 	printf("Output path: %s\n", output_path);
-	printf("Output format: %s\n", output_format == 0 ? "HAP" : "PED");
+	printf("Output format: %s\n", output_format == 0 ? "HAP" : (output_format == 1 ? "PED" : "BOTH (HAP + PED, same data)"));
 	printf("Individuals: %d\n", NUM_INDIVIDUALS);
 	printf("SNPs per chromosome: %d\n", NUM_SNPS_PER_CHR);
 	printf("Chromosomes: 1-%d\n", NUM_CHROMOSOMES);
+	printf("Trio: individual 0 = offspring of individuals 1 and 2\n");
+	printf("  Detail: Parent1=indiv1, Parent2=indiv2. Per chromosome: one recombination event;\n");
+	printf("  at a random crossover SNP, the transmitted haplotype from each parent switches.\n");
+	printf("  Before crossover: offspring gets hap0 or hap1 from P1 and P2.\n");
+	printf("  After crossover: offspring gets the other haplotype from each parent.\n");
 	printf("========================================\n\n");
+
+	// Write window coordinates file (recombinaisonWindows.txt: windows 0-500, 500-1000)
+	if (write_window_file(output_path) != 0) {
+		printf("WARNING: Failed to write window file\n");
+	}
 	
 	// Generate files for each chromosome
 	int error_count = 0;
+	unsigned char chrom_data[NUM_INDIVIDUALS][NUM_SNPS_PER_CHR][2];
+	
 	for (int chr = 1; chr <= NUM_CHROMOSOMES; chr++)
 	{
 		printf("\n--- Processing Chromosome %d ---\n", chr);
 		
-		// Pre-compute MAF values for this chromosome (used for both HAP and PED)
-		// Allele frequencies are generated between 0.05 and 0.95, then converted to MAF (0.05 to 0.5)
+		// Pre-compute MAF values for this chromosome
 		double maf_array[NUM_SNPS_PER_CHR];
 		for (int snp = 0; snp < NUM_SNPS_PER_CHR; snp++)
-		{
 			maf_array[snp] = generate_allele_frequency();
-		}
 		
-		// Generate genotype file based on format
-		if (output_format == 0)  // HAP format
+		// Generate genotype data once (same data for HAP and PED)
+		printf("  Generating genotype data...\n");
+		generate_chromosome_data(chr, maf_array, chrom_data);
+		
+		// Write HAP file if requested
+		if (output_format == 0 || output_format == 2)
 		{
-			// Generate HAP file using pre-computed MAF
-			if (generate_hap_file(output_path, chr, maf_array) != 0)
+			if (write_hap_file(output_path, chr, maf_array, chrom_data) != 0)
 			{
 				error_count++;
-				printf("ERROR: Failed to generate HAP file for chromosome %d\n", chr);
-				continue;
-			}
-		}
-		else  // PED format
-		{
-			// Generate PED file using pre-computed MAF
-			if (generate_ped_file(output_path, chr, maf_array) != 0)
-			{
-				error_count++;
-				printf("ERROR: Failed to generate PED file for chromosome %d\n", chr);
-				continue;
+				printf("ERROR: Failed to write HAP file for chromosome %d\n", chr);
 			}
 		}
 		
-		// Generate MAF file (always generated, using pre-computed MAF values)
+		// Write PED file if requested
+		if (output_format == 1 || output_format == 2)
+		{
+			if (write_ped_file(output_path, chr, chrom_data) != 0)
+			{
+				error_count++;
+				printf("ERROR: Failed to write PED file for chromosome %d\n", chr);
+			}
+		}
+		
+		// Generate MAF file (always)
 		if (generate_maf_file(output_path, chr, maf_array) != 0)
 		{
 			error_count++;
 			printf("ERROR: Failed to generate MAF file for chromosome %d\n", chr);
-			continue;
 		}
 		
 		printf("Chromosome %d: Complete\n", chr);
@@ -611,16 +619,13 @@ int main(int argc, char* argv[])
 	if (error_count == 0)
 	{
 		printf("SUCCESS: All files generated successfully!\n");
-		if (output_format == 0)
-		{
-			printf("Generated %d HAP files and %d MAF files\n", 
-				NUM_CHROMOSOMES, NUM_CHROMOSOMES);
-		}
+		if (output_format == 2)
+			printf("Generated %d HAP files, %d PED files, %d MAF files (HAP and PED = same data)\n",
+				NUM_CHROMOSOMES, NUM_CHROMOSOMES, NUM_CHROMOSOMES);
+		else if (output_format == 0)
+			printf("Generated %d HAP files and %d MAF files\n", NUM_CHROMOSOMES, NUM_CHROMOSOMES);
 		else
-		{
-			printf("Generated %d PED files and %d MAF files\n", 
-				NUM_CHROMOSOMES, NUM_CHROMOSOMES);
-		}
+			printf("Generated %d PED files and %d MAF files\n", NUM_CHROMOSOMES, NUM_CHROMOSOMES);
 	}
 	else
 	{
@@ -628,6 +633,12 @@ int main(int argc, char* argv[])
 	}
 	printf("========================================\n");
 	
-	return (error_count == 0) ? 0 : 1;
+	if (error_count == 0) {
+		printf("RETURN(0): GenerateRandomData completed successfully.\n");
+		return 0;
+	} else {
+		printf("RETURN(1): GenerateRandomData failed with %d errors.\n", error_count);
+		return 1;
+	}
 }
 

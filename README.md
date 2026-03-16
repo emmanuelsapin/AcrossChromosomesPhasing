@@ -159,7 +159,7 @@ Results will be written to:
 ## File Formats
 
 ### HAP Format
-- **Extension**: `.hap`
+- **Extension**: `.haps`
 - **Structure**: One SNP per line
 - **Format**: `rsID position allele1_indiv1 allele2_indiv1 ...`
 - **Use case**: Efficient storage, SNP-centric view
@@ -283,7 +283,7 @@ Each output file contains phased haplotypes for all processed individuals.
 
 **Error: "Could not open file"**
 - Solution: Check that input files exist and paths are correct
-- For HAP: Files should be named `<PathInput>1.hap`, `<PathInput>2.hap`, etc.
+- For HAP: Files should be named `<PathInput>1.haps`, `<PathInput>2.haps`, etc.
 - For PED: Files should be named `<PathInput>1.ped`, `<PathInput>2.ped`, etc.
 
 **Error: "Failed to read parent info file"**
