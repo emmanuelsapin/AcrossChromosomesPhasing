@@ -1,3 +1,4 @@
+
 /***************************************************************************************************************************************************
 *
 *                                 This program will read segment and output condense files
@@ -867,7 +868,244 @@ int acrosschrphasing(int ID,int IDp1loop,int IDp2loop,char pathresult[], const c
 	///////////******************************************************************************************************************************************************************************
 	///////////                                    start main loop                                                                                                                    *
 	///////////******************************************************************************************************************************************************************************			
-
+//#pragma omp parallel for 	
+	for(int  chrtemp1=22;chrtemp1>0;chrtemp1--)		
+	{	printf("Start correctin chr %d\n",chrtemp1);
+		int nbindivmatchseg[MAXPOP][4];
+		for(int64_t relat=0;relat<(int64_t) MAXPOP;relat++)// if (pihatagainstall[relat]<seuilpihat[0] )
+		{	nbindivmatchseg[relat][0]=0;
+			nbindivmatchseg[relat][1]=0;
+			nbindivmatchseg[relat][2]=0;
+			nbindivmatchseg[relat][3]=0;
+		};
+		int nbsegmentofthislength[NSNPPERCHR];
+		for(int snp=0;snp<nbsnpperchr[chrtemp1];snp++)
+		{	nbsegmentofthislength[snp]=0;
+		};
+		int typesegment=-1;
+		int lasttypesegment=-1;
+		int endlastsegment[4]={-1};
+		double ratetoconsiderseg=0.0001;
+		double ratetoconsidersegPE=ratetoconsiderseg*2; 
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		ratetoconsiderseg=0.000012; 
+		ratetoconsidersegPE=ratetoconsiderseg;  
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		int NBsnptocountseg=200;
+		
+		
+		int nbminsegstopforsnperror=100;
+		
+		int phaseerrorpossible[4]={0};
+		
+		for(int snp=0;snp<nbsnpperchr[chrtemp1];snp++)
+		{	int nbsegstop[4]={0};
+			int IDseglongest[4]={-1};
+			int seglongest[4]={-1};
+			
+			if (snp==0)
+			{	for(int64_t relat=0;relat<(int64_t) MAXPOP;relat++)// if (pihatagainstall[relat]<seuilpihat[0] )
+				{	nbindivmatchseg[relat][0]=0;
+					nbindivmatchseg[relat][1]=0;
+					nbindivmatchseg[relat][2]=0;
+					nbindivmatchseg[relat][3]=0;
+				};
+				
+				for(int snp=0;snp<nbsnpperchr[chrtemp1];snp++)
+				{	nbsegmentofthislength[snp]=0;
+				};
+				endlastsegment[0]=0;endlastsegment[1]=0;endlastsegment[2]=0;endlastsegment[3]=0;
+			};
+			//printf("%d %d %d %d",chrdividerrun,lastmatchend	,chrdividerrun,lastmatchtype); 
+			int snpvalue0=genomeoffpss[0][snp][chrtemp1];		
+			int nbsnpperchrby4=(nbsnpperchr[chrtemp1]/4+((nbsnpperchr[chrtemp1]%4)>0));
+			int snpmod4=(((snp%4)*2));
+			int snpdiv4=snp/4;
+			//#pragma omp parallel for 			
+			for(int64_t relat=0;relat<(int64_t) MAXPOP;relat++) if (relat!=ID && pihatagainstall[relat]<seuilpihat[0] )
+			{	int snpvalue1=(*((genomes[chrtemp1]+(unsigned long long) relat*nbsnpperchrby4 )+snpdiv4)>>snpmod4)&3;
+				if (nbindivmatchseg[relat][0]>seglongest[0]) 
+				{	IDseglongest[0]=relat;
+					seglongest[0]=nbindivmatchseg[relat][0];
+				};
+				if ((snpvalue0&1)==(snpvalue1&1))
+				{	if (nbindivmatchseg[relat][0]<NBsnptocountseg) nbindivmatchseg[relat][0]++; else 
+					nbsegmentofthislength[++nbindivmatchseg[relat][0]]++;
+				} else 
+				{	if (nbindivmatchseg[relat][0]<NBsnptocountseg) nbindivmatchseg[relat][0]=0; else 
+					{	
+						for(int lenght=NBsnptocountseg;lenght<nbindivmatchseg[relat][0]+1;lenght++) nbsegmentofthislength[lenght]--;
+						nbsegstop[0]++;
+						nbindivmatchseg[relat][0]=0;
+						
+					}
+				};
+				if (seglongest[1]<nbindivmatchseg[relat][1]) 
+				{	IDseglongest[1]=relat;
+					seglongest[1]=nbindivmatchseg[relat][1];
+				}
+				if ((snpvalue0&1)==(snpvalue1>>1))
+				{	if (nbindivmatchseg[relat][1]<NBsnptocountseg) nbindivmatchseg[relat][1]++;
+					else nbsegmentofthislength[++nbindivmatchseg[relat][1]]++;
+				} else 
+				{	if (nbindivmatchseg[relat][1]<NBsnptocountseg) nbindivmatchseg[relat][1]=0; else 
+					{	
+						for(int lenght=NBsnptocountseg;lenght<nbindivmatchseg[relat][1]+1;lenght++) nbsegmentofthislength[lenght]--;
+						nbsegstop[1]++;
+						nbindivmatchseg[relat][1]=0;
+						
+					};
+				};
+				if (seglongest[2]<nbindivmatchseg[relat][2]) 
+				{	IDseglongest[2]=relat;
+					seglongest[2]=nbindivmatchseg[relat][2];
+				}
+				if ((snpvalue0>>1)==(snpvalue1&1))
+				{	if (nbindivmatchseg[relat][2]<NBsnptocountseg) nbindivmatchseg[relat][2]++;
+					else nbsegmentofthislength[++nbindivmatchseg[relat][2]]++;
+				} else 
+				{	if (nbindivmatchseg[relat][2]<NBsnptocountseg) nbindivmatchseg[relat][2]=0;
+					else 
+					{	
+						for(int lenght=NBsnptocountseg;lenght<nbindivmatchseg[relat][2]+1;lenght++) nbsegmentofthislength[lenght]--;
+						nbsegstop[2]++;
+						nbindivmatchseg[relat][2]=0;
+					}
+				};
+				if (seglongest[3]<nbindivmatchseg[relat][3]) 
+				{	IDseglongest[3]=relat;
+					seglongest[3]=nbindivmatchseg[relat][3];
+				}	
+						
+				if ((snpvalue0>>1)==(snpvalue1>>1))
+				{	if (nbindivmatchseg[relat][3]<NBsnptocountseg) nbindivmatchseg[relat][3]++;
+					else nbsegmentofthislength[++nbindivmatchseg[relat][3]]++;
+				} else 
+				{	if (nbindivmatchseg[relat][3]<NBsnptocountseg) nbindivmatchseg[relat][3]=0;	
+					else 
+					{				
+						for(int lenght=NBsnptocountseg;lenght<nbindivmatchseg[relat][3]+1;lenght++) nbsegmentofthislength[lenght]--;
+						nbsegstop[3]++;
+						nbindivmatchseg[relat][3]=0;	
+					};
+				};
+			};
+			
+			
+			int nbsnpminforsnperror=100;
+			
+			
+			int nbcommonneeded=0;
+			int genmodif=0;
+			if (nbminsegstopforsnperror<nbsegstop[0] && IDseglongest[0]>-1 && seglongest[0]>nbsnpminforsnperror && seglongest[0]>seglongest[1] && nbindivmatchseg[IDseglongest[0]][0]==0)
+			{	if (IDseglongest[0]==-1) 
+				{	printf("ERROR ");
+					exit(1);
+				}
+				for(int loopsnp=snp+1;loopsnp<nbsnpperchr[chrtemp1];loopsnp++)
+				{	if ((genomeoffpss[0][loopsnp][chrtemp1]&1)==(((*((genomes[chrtemp1]+(unsigned long long) IDseglongest[0]*nbsnpperchrby4 )+loopsnp/4)>>(((loopsnp%4)*2)))&3)&1)) nbcommonneeded++;
+					else loopsnp=nbsnpperchr[chrtemp1];
+				}
+				printf("seg0 chr %d snp %d nbsegstop[0] %d IDseglongest[0] %d seglongest[0] %d nbcommonneeded %d\n",chrtemp1,snp, nbsegstop[0],IDseglongest[0],seglongest[0],nbcommonneeded);
+				if (nbcommonneeded>nbsnpminforsnperror) 
+				{	genomeoffpss[0][snp][chrtemp1]=(1-(genomeoffpss[0][snp][chrtemp1]&1))+(genomeoffpss[0][snp][chrtemp1]&2);
+					genmodif=1;
+					printf("chr %d snp %d haplot 2 go from %d to %d\n",chrtemp1, snp,1-genomeoffpss[0][snp][chrtemp1]&1, genomeoffpss[0][snp][chrtemp1]&1);
+				};
+			};
+			nbcommonneeded=0;
+			if (nbminsegstopforsnperror<nbsegstop[1] && IDseglongest[1]>-1 && seglongest[1]>nbsnpminforsnperror && seglongest[1]>seglongest[0] && nbindivmatchseg[IDseglongest[1]][1]==0)
+			{	if (IDseglongest[1]==-1) 
+				{	printf("ERROR ");
+					exit(1);
+				}
+				for(int loopsnp=snp+1;loopsnp<nbsnpperchr[chrtemp1];loopsnp++)
+				{	if ((genomeoffpss[0][loopsnp][chrtemp1]&1)==(((*((genomes[chrtemp1]+(unsigned long long) IDseglongest[1]*nbsnpperchrby4 )+loopsnp/4)>>(((loopsnp%4)*2)))&3)>>1)) nbcommonneeded++;
+					else loopsnp=nbsnpperchr[chrtemp1];
+				}
+				printf("seg1 chr %d snp %d nbsegstop[0] %d IDseglongest[0] %d seglongest[0] %d nbcommonneeded %d\n",chrtemp1,snp, nbsegstop[1],IDseglongest[1],seglongest[1],nbcommonneeded);
+				if (nbcommonneeded>nbsnpminforsnperror) 
+				{	genomeoffpss[0][snp][chrtemp1]=(1-(genomeoffpss[0][snp][chrtemp1]&1))+(genomeoffpss[0][snp][chrtemp1]&2);
+					genmodif=1;
+					printf("chr %d snp %d haplot 2 go from %d to %d\n",chrtemp1, snp,1-genomeoffpss[0][snp][chrtemp1]&1, genomeoffpss[0][snp][chrtemp1]&1);
+				};
+			};
+			
+			nbcommonneeded=0;
+			if (nbminsegstopforsnperror<nbsegstop[2]  && IDseglongest[2]>-1 && seglongest[2]>nbsnpminforsnperror && seglongest[2]>seglongest[3] && nbindivmatchseg[IDseglongest[2]][2]==0)
+			{	if (IDseglongest[2]==-1) 
+				{	printf("ERROR ");
+					exit(1);
+				}
+				for(int loopsnp=snp+1;loopsnp<nbsnpperchr[chrtemp1];loopsnp++)
+				{	if ((genomeoffpss[0][loopsnp][chrtemp1]>>1)==(((*((genomes[chrtemp1]+(unsigned long long) IDseglongest[2]*nbsnpperchrby4 )+loopsnp/4)>>(((loopsnp%4)*2)))&3)&1)) nbcommonneeded++;
+					else loopsnp=nbsnpperchr[chrtemp1];
+				}
+				printf("seg2 chr %d snp %d nbsegstop[0] %d IDseglongest[0] %d seglongest[0] %d nbcommonneeded %d\n",chrtemp1,snp, nbsegstop[2],IDseglongest[2],seglongest[2],nbcommonneeded);
+				if (nbcommonneeded>nbsnpminforsnperror) 
+				{	genomeoffpss[0][snp][chrtemp1]=((genomeoffpss[0][snp][chrtemp1]&1))+(2-(genomeoffpss[0][snp][chrtemp1]&2));
+					genmodif=1;
+					printf("chr %d snp %d haplot 1 go from %d to %d\n",chrtemp1, snp,1-(genomeoffpss[0][snp][chrtemp1]>>1), genomeoffpss[0][snp][chrtemp1]>>1);
+				};
+			};
+			
+			nbcommonneeded=0;
+			if (nbminsegstopforsnperror<nbsegstop[3]  && IDseglongest[3]>-1 && seglongest[3]>nbsnpminforsnperror && seglongest[3]>seglongest[2] && nbindivmatchseg[IDseglongest[3]][3]==0)
+			{	if (IDseglongest[3]==-1) 
+				{	printf("ERROR ");
+					exit(1);
+				}
+				for(int loopsnp=snp+1;loopsnp<nbsnpperchr[chrtemp1];loopsnp++)
+				{	if ((genomeoffpss[0][loopsnp][chrtemp1]>>1)==(((*((genomes[chrtemp1]+(unsigned long long) IDseglongest[3]*nbsnpperchrby4 )+loopsnp/4)>>(((loopsnp%4)*2)))&3)>>1)) nbcommonneeded++;
+					else loopsnp=nbsnpperchr[chrtemp1];
+				}
+				printf("seg3 chr %d snp %d nbsegstop[0] %d IDseglongest[0] %d seglongest[0] %d nbcommonneeded %d\n",chrtemp1,snp, nbsegstop[3],IDseglongest[3],seglongest[3],nbcommonneeded);
+				if (nbcommonneeded>nbsnpminforsnperror) 
+				{	genomeoffpss[0][snp][chrtemp1]=((genomeoffpss[0][snp][chrtemp1]&1))+(2-(genomeoffpss[0][snp][chrtemp1]&2));
+					genmodif=1;
+					printf("chr %d snp %d haplot 1 go from %d to %d\n",chrtemp1, snp,1-(genomeoffpss[0][snp][chrtemp1]>>1), genomeoffpss[0][snp][chrtemp1]>>1);
+				};
+			};
+			if (genmodif==1) snp=-1;
+		};
+	};
 	float seuiltocorrect=0.022;
 
 	char (*segwithav)[NSNPPERCHR] = (char (*)[NSNPPERCHR])calloc(23, NSNPPERCHR);
@@ -1981,3 +2219,5 @@ int main(int argc, char *argv[])
 	printf("RETURN(0): main completed successfully.\n");
 	return 0;
 }
+						
+						
